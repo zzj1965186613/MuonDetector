@@ -1,8 +1,7 @@
-import streamlit as st
+﻿import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 from scipy.stats import poisson
 import warnings
 warnings.filterwarnings('ignore')
@@ -91,37 +90,30 @@ with col1:
     x_data = counts_freq.index.values.astype(float) # 强制转为浮点型防报错
     y_data = counts_freq.values
     
-    # 定义并拟合泊松函数
-    def poisson_fit(k, lamb):
-        return poisson.pmf(k, lamb) * np.sum(y_data)
-        
     try:
-        # 使用真实数据的均值作为初始猜测参数
-        initial_guess = float(np.mean(df_grouped['Delta_Count']))
-        popt, _ = curve_fit(poisson_fit, x_data, y_data, p0=[initial_guess])
-        
-        # 【关键修复点1】强制提取为纯 Python float，防止底层 scipy 广播失败
-        lambda_opt = float(popt[0])
-        
-        ax2.bar(x_data, y_data, alpha=0.6, color='coral', label='Experiment Data')
-        
-        # 【关键修复点2】强制使用 int 提取最大值，确保生成的 x_fit 是标准的整型数组
-        x_max = int(np.max(x_data))
-        x_fit = np.arange(0, x_max + 2)
-        
-        # 【关键修复点3】直接显式计算 y_fit 数组，绕过闭包函数调用带来的潜在风险
-        y_fit = poisson.pmf(x_fit, lambda_opt) * np.sum(y_data)
-        
-        ax2.plot(x_fit, y_fit, 'r-', lw=2, label=f'Poisson Fit (λ={lambda_opt:.2f})')
+        # ?? MLE???????? lambda?? curve_fit ???????? lambda?30s/60s????
+        lambda_opt = float(np.mean(df_grouped['Delta_Count']))
+        N = int(np.sum(y_data))
+
+        # ??????????????? 0??????????? k???????
+        k_all = np.arange(0, int(np.max(x_data)) + 1)
+        y_all = np.array([int(counts_freq.get(k, 0)) for k in k_all], dtype=float)
+
+        ax2.bar(k_all, y_all, alpha=0.6, color='coral', label='Experiment Data', width=0.8, align='center')
+
+        # ????????????????????? k??????????
+        x_fit = np.arange(0, int(lambda_opt + 5*np.sqrt(lambda_opt)) + 1)
+        y_fit = poisson.pmf(x_fit, lambda_opt) * N
+
+        ax2.plot(x_fit, y_fit, 'r-', lw=2, label=f'Poisson (λ={lambda_opt:.2f})')
         ax2.set_xlabel(f'Muon Counts per {time_window}s')
         ax2.set_ylabel('Frequency')
+        ax2.set_xlim(-0.5, max(int(np.max(x_fit)), int(np.max(k_all))) + 0.5)
         ax2.legend()
         ax2.grid(True, alpha=0.3)
     except Exception as e:
-        # 优化容错机制：如果有其他数据异常，将报错打印在图表内而不是让整个网页崩溃
         ax2.text(0.5, 0.5, f"拟合异常: {str(e)}", ha='center', va='center', color='red')
         ax2.axis('off')
-        
     st.pyplot(fig2)
 # 第三部分：能量沉积谱（朗道分布长尾）
 with col2:
@@ -149,6 +141,6 @@ with col2:
 st.markdown("---")
 st.markdown(r"""
 **📘 教学指导意见：**
-* **本底与噪声**：尝试在左侧拖动 `ADC噪声阈值` 滑块。你将会直观地看到低能本底（如环境伽马射线）被过滤后，高能宇宙线缪子特有的「长尾能谱」特征更加明显。
+* **本底与噪声**：尝试向**右**拖动 `ADC噪声阈值` 滑块（增大阈值）。低能本底（如环境伽马射线、电子噪声）被过滤后，缪子作为最小电离粒子（MIP）特有的朗道分布「长尾能谱」特征将更加清晰可见。
 * **统计误差**：尝试改变 `时间积分窗口`。当窗口过小（如1秒）时，计数少，泊松分布的形状会非常离散且不对称；当窗口增大，平均期望 ($\\lambda$) 变大，泊松分布将逐渐向高斯分布（正态分布）演化，这是深刻理解中心极限定理的绝佳实验。
 """)
