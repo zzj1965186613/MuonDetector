@@ -20,7 +20,7 @@ st.markdown("基于双层塑料闪烁体与SiPM符合测量的真实物理数据
 # 1. 侧边栏：参数交互与文件上传
 # ==========================================
 st.sidebar.header("⚙️ 实验参数调节")
-st.sidebar.markdown("模拟硬件调节与后期数据清洗：")
+st.sidebar.markdown("参数模拟与实测数据导入：")
 
 # 交互控件 1：ADC噪声阈值
 adc_threshold = st.sidebar.slider("ADC 噪声阈值(过滤低能本底)", min_value=200, max_value=800, value=350, step=10)
